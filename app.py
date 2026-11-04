@@ -76,9 +76,6 @@ if y_test.nunique() < 2:
 y_pred = model.predict(X_test)
 positive_class_index = list(model.classes_).index(1)
 y_score = model.predict_proba(X_test)[:, positive_class_index]
-y_pred = model.predict(X_test)
-positive_class_index = list(model.classes_).index(1)
-y_score = model.predict_proba(X_test)[:, positive_class_index]
 
 metrics = {
     "Accuracy": accuracy_score(y_test, y_pred),
@@ -90,6 +87,7 @@ metrics = {
 }
 
 st.subheader("Evaluation metrics")
+st.caption(f"Evaluated data: {data_source} ({len(test_data)} rows)")
 metrics_table = "| " + " | ".join(metrics) + " |\n"
 metrics_table += "|" + " ---: |" * len(metrics) + "\n"
 metrics_table += "| " + " | ".join(f"{value:.4f}" for value in metrics.values()) + " |"
@@ -112,4 +110,5 @@ st.markdown(
 with st.expander("Dataset and test split"):
     st.write(f"Held-out instances: {len(test_data)}")
     st.write(f"Input features: {X_test.shape[1]}")
+    st.write(f"Data source: {data_source}")
     st.write("The saved pipeline applies feature scaling before Logistic Regression.")
