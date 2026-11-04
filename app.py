@@ -21,14 +21,61 @@ st.set_page_config(page_title="WDBC Classifier Evaluation", layout="wide")
 st.title("Breast Cancer Classification")
 st.caption("UCI Breast Cancer Wisconsin Diagnostic dataset | Logistic Regression")
 
-if not MODEL_PATH.exists() or not TEST_DATA_PATH.exists():
-    st.warning("Model artifacts are not available yet. Run `python source/train_models.py` first.")
+if not MODEL_PATH.exists():
+    st.warning("The trained model is not available yet. Run `python source/train_models.py` first.")
     st.stop()
 
 model = joblib.load(MODEL_PATH)
-test_data = pd.read_csv(TEST_DATA_PATH)
-X_test = test_data.drop(columns="target")
-y_test = test_data["target"]
+expected_features = list(model.feature_names_in_)
+
+st.subheader("Test data")
+uploaded_file = st.file_uploader(
+    "Upload test data as CSV",
+    type=["csv"],
+    help="Include all 30 model features and a target column (0 = malignant, 1 = benign).",
+)
+
+if uploaded_file is not None:
+    try:
+        test_data = pd.read_csv(uploaded_file)
+    except (pd.errors.EmptyDataError, pd.errors.ParserError, UnicodeDecodeError) as error:
+        st.error(f"Could not read the uploaded CSV: {error}")
+        st.stop()
+    data_source = uploaded_file.name
+else:
+    if not TEST_DATA_PATH.exists():
+        st.error("No CSV was uploaded and the default test_data.csv file is missing.")
+        st.stop()
+    test_data = pd.read_csv(TEST_DATA_PATH)
+    data_source = "Bundled test_data.csv"
+
+if "target" not in test_data.columns:
+    st.error("The CSV must include a `target` column with labels 0 or 1.")
+    st.stop()
+
+missing_features = [feature for feature in expected_features if feature not in test_data.columns]
+if missing_features:
+    st.error(f"The CSV is missing required model features: {', '.join(missing_features)}")
+    st.stop()
+
+X_test = test_data.loc[:, expected_features].apply(pd.to_numeric, errors="coerce")
+y_test = pd.to_numeric(test_data["target"], errors="coerce")
+if X_test.empty:
+    st.error("The CSV must contain at least one test row.")
+    st.stop()
+if X_test.isna().any().any() or y_test.isna().any():
+    st.error("Feature and target values must be present and numeric.")
+    st.stop()
+if not set(y_test.unique()).issubset(set(model.classes_)):
+    st.error(f"Target values must be 0 or 1; received {sorted(y_test.unique())}.")
+    st.stop()
+if y_test.nunique() < 2:
+    st.error("The test CSV must contain both target classes to calculate AUC.")
+    st.stop()
+
+y_pred = model.predict(X_test)
+positive_class_index = list(model.classes_).index(1)
+y_score = model.predict_proba(X_test)[:, positive_class_index]
 y_pred = model.predict(X_test)
 positive_class_index = list(model.classes_).index(1)
 y_score = model.predict_proba(X_test)[:, positive_class_index]
