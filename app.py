@@ -43,26 +43,28 @@ metrics = {
 }
 
 st.subheader("Evaluation metrics")
-st.dataframe(
-    pd.DataFrame([{"Model": "Logistic Regression", **metrics}]).set_index("Model"),
-    use_container_width=True,
-)
+metric_items = list(metrics.items())
+for row_start in range(0, len(metric_items), 3):
+    metric_columns = st.columns(3)
+    for column, (metric_name, metric_value) in zip(
+        metric_columns,
+        metric_items[row_start : row_start + 3],
+    ):
+        column.metric(metric_name, f"{metric_value:.4f}")
 st.caption("Positive class: benign (label 1). Metrics use the fixed held-out test split.")
 
 st.subheader("Model implementation status")
-model_status = pd.DataFrame(
-    {
-        "Model": [
-            "Logistic Regression",
-            "Decision Tree",
-            "K-Nearest Neighbors",
-            "Naive Bayes",
-            "Support Vector Machine",
-        ],
-        "Status": ["Implemented"] + ["Not implemented yet"] * 4,
-    }
+st.markdown(
+    """
+    | Model | Status |
+    | --- | --- |
+    | Logistic Regression | Implemented |
+    | Decision Tree | Not implemented yet |
+    | K-Nearest Neighbors | Not implemented yet |
+    | Naive Bayes | Not implemented yet |
+    | Support Vector Machine | Not implemented yet |
+    """
 )
-st.dataframe(model_status, hide_index=True, use_container_width=True)
 
 with st.expander("Dataset and test split"):
     st.write(f"Held-out instances: {len(test_data)}")
