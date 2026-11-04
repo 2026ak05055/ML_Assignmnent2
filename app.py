@@ -43,14 +43,10 @@ metrics = {
 }
 
 st.subheader("Evaluation metrics")
-metric_items = list(metrics.items())
-for row_start in range(0, len(metric_items), 3):
-    metric_columns = st.columns(3)
-    for column, (metric_name, metric_value) in zip(
-        metric_columns,
-        metric_items[row_start : row_start + 3],
-    ):
-        column.metric(metric_name, f"{metric_value:.4f}")
+metrics_table = "| " + " | ".join(metrics) + " |\n"
+metrics_table += "|" + " ---: |" * len(metrics) + "\n"
+metrics_table += "| " + " | ".join(f"{value:.4f}" for value in metrics.values()) + " |"
+st.markdown(metrics_table)
 st.caption("Positive class: benign (label 1). Metrics use the fixed held-out test split.")
 
 st.subheader("Model implementation status")
