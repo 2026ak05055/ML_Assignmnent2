@@ -2,28 +2,98 @@ from pathlib import Path
 
 import joblib
 import pandas as pd
-from sklearn.datasets import load_breast_cancer
+from sklearn.metrics import (
+    accuracy_score,
+    f1_score,
+    matthews_corrcoef,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
 
 
 ROOT = Path(__file__).resolve().parents[1]
 MODEL_DIR = ROOT / "model"
-MODEL_PATH = MODEL_DIR / "logistic_regression.joblib"
+DATA_PATH = ROOT / "data" / "wdbc.csv"
 TEST_DATA_PATH = ROOT / "test_data.csv"
+METRICS_PATH = MODEL_DIR / "metrics.csv"
 RANDOM_STATE = 42
 
 
+def build_models() -> dict[str, object]:
+    return {
+        "Logistic Regression": Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                ("classifier", LogisticRegression(max_iter=2000, random_state=RANDOM_STATE)),
+            ]
+        ),
+        "Decision Tree": DecisionTreeClassifier(random_state=RANDOM_STATE),
+        "KNN": Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                ("classifier", KNeighborsClassifier(n_neighbors=5)),
+            ]
+        ),
+        "Naive Bayes": Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                ("classifier", GaussianNB()),
+            ]
+        ),
+        "Support Vector Machine": Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                ("classifier", SVC(random_state=RANDOM_STATE)),
+            ]
+        ),
+    }
+
+
+def calculate_metrics(model: object, X_test: pd.DataFrame, y_test: pd.Series) -> dict[str, float]:
+    predictions = model.predict(X_test)
+    if hasattr(model, "predict_proba"):
+        positive_class_index = list(model.classes_).index(1)
+        positive_scores = model.predict_proba(X_test)[:, positive_class_index]
+    else:
+        positive_scores = model.decision_function(X_test)
+    return {
+        "Accuracy": accuracy_score(y_test, predictions),
+        "AUC Score": roc_auc_score(y_test, positive_scores),
+        "Precision": precision_score(y_test, predictions, zero_division=0),
+        "Recall": recall_score(y_test, predictions, zero_division=0),
+        "F1 Score": f1_score(y_test, predictions, zero_division=0),
+        "Matthews Correlation Coefficient (MCC Score)": matthews_corrcoef(
+            y_test,
+            predictions,
+        ),
+    }
+
+
 def main() -> None:
-    dataset = load_breast_cancer(as_frame=True)
-    features = dataset.data
-    target = dataset.target.rename("target")
+    if not DATA_PATH.exists():
+        raise FileNotFoundError(f"Dataset not found: {DATA_PATH}")
+
+    dataset = pd.read_csv(DATA_PATH)
+    if "target" not in dataset.columns:
+        raise ValueError("The dataset CSV must contain a 'target' column.")
+
+    features = dataset.drop(columns="target")
+    target = pd.to_numeric(dataset["target"], errors="raise").rename("target")
 
     if features.shape[1] < 12 or features.shape[0] < 500:
         raise ValueError("The selected dataset does not meet the assignment minimums.")
-
+    if set(target.unique()) != {0, 1}:
+        raise ValueError("The target must use 0 for malignant and 1 for benign.")
+    
     X_train, X_test, y_train, y_test = train_test_split(
         features,
         target,
@@ -32,27 +102,29 @@ def main() -> None:
         stratify=target,
     )
 
-    model = Pipeline(
-        [
-            ("scaler", StandardScaler()),
-            ("classifier", LogisticRegression(max_iter=2000, random_state=RANDOM_STATE)),
-        ]
-    )
-    model.fit(X_train, y_train)
-
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
-    joblib.dump(model, MODEL_PATH)
     pd.concat([X_test.reset_index(drop=True), y_test.reset_index(drop=True)], axis=1).to_csv(
         TEST_DATA_PATH,
         index=False,
     )
 
-    print(f"Dataset: {dataset.DESCR.splitlines()[0]}")
+    results = []
+    for model_name, model in build_models().items():
+        model.fit(X_train, y_train)
+        results.append({"Model": model_name, **calculate_metrics(model, X_test, y_test)})
+        model_path = MODEL_DIR / f"{model_name.lower().replace(' ', '_')}.joblib"
+        joblib.dump(model, model_path)
+        print(f"Saved model: {model_path}")
+
+    results_frame = pd.DataFrame(results).set_index("Model")
+    results_frame.to_csv(METRICS_PATH)
+    print("\nHeld-out evaluation metrics:")
+    print(results_frame.to_string(float_format=lambda value: f"{value:.4f}"))
+    print(f"Dataset: {DATA_PATH}")
     print(f"Instances: {len(features)}; features: {features.shape[1]}")
     print(f"Training instances: {len(X_train)}; test instances: {len(X_test)}")
-    print(f"Saved model: {MODEL_PATH}")
     print(f"Saved test data: {TEST_DATA_PATH}")
-
+    print(f"Saved metrics: {METRICS_PATH}")
 
 if __name__ == "__main__":
     main()
