@@ -133,7 +133,8 @@ st.markdown(
 )
 
 st.subheader(f"{selected_model_name} classification report")
-report = classification_report(
+from sklearn.metrics import classification_report as build_classification_report
+report = build_classification_report(
     y_test,
     predictions_by_model[selected_model_name],
     labels=[0, 1],
@@ -164,6 +165,7 @@ report_table += (
     f"({len(y_test)} samples)"
 )
 st.markdown(report_table)
+
 with st.expander("Compare all classifiers"):
     metrics_table = "| Model | " + " | ".join(metric_names) + " |\n"
     metrics_table += "| --- |" + " ---: |" * len(metric_names) + "\n"
