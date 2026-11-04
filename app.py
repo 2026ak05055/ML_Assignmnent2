@@ -10,6 +10,7 @@ from sklearn.metrics import (
     f1_score,
     matthews_corrcoef,
     roc_auc_score,
+    confusion_matrix,
 )
 
 
@@ -89,40 +90,90 @@ metric_names = [
     "Matthews Correlation Coefficient (MCC Score)",
 ]
 results = []
+predictions_by_model = {}
 for model_name, classifier in models.items():
     y_pred = classifier.predict(X_test)
+    predictions_by_model[model_name] = y_pred
     if hasattr(classifier, "predict_proba"):
         positive_class_index = list(classifier.classes_).index(1)
         y_score = classifier.predict_proba(X_test)[:, positive_class_index]
     else:
         y_score = classifier.decision_function(X_test)
-    results.append(
-        {
-            "Model": model_name,
-            "Accuracy": accuracy_score(y_test, y_pred),
-            "AUC Score": roc_auc_score(y_test, y_score),
-            "Precision": precision_score(y_test, y_pred, zero_division=0),
-            "Recall": recall_score(y_test, y_pred, zero_division=0),
-            "F1 Score": f1_score(y_test, y_pred, zero_division=0),
-            "Matthews Correlation Coefficient (MCC Score)": matthews_corrcoef(
-                y_test,
-                y_pred,
-            ),
-        }
-    )
+    results.append({
+        "Model": model_name,
+        "Accuracy": accuracy_score(y_test, y_pred),
+        "AUC Score": roc_auc_score(y_test, y_score),
+        "Precision": precision_score(y_test, y_pred, zero_division=0),
+        "Recall": recall_score(y_test, y_pred, zero_division=0),
+        "F1 Score": f1_score(y_test, y_pred, zero_division=0),
+        "Matthews Correlation Coefficient (MCC Score)": matthews_corrcoef(
+            y_test,
+            y_pred,
+        ),
+    })
 
-st.subheader("Evaluation metrics")
+st.subheader("Model evaluation")
 st.caption(f"Evaluated data: {data_source} ({len(test_data)} rows)")
-metrics_table = "| Model | " + " | ".join(metric_names) + " |\n"
-metrics_table += "| --- |" + " ---: |" * len(metric_names) + "\n"
-for result in results:
-    metrics_table += (
-        f"| {result['Model']} | "
-        + " | ".join(f"{result[name]:.4f}" for name in metric_names)
-        + " |\n"
+selected_model_name = st.selectbox("Select classifier", list(models))
+selected_result = next(result for result in results if result["Model"] == selected_model_name)
+selected_metrics_table = "| " + " | ".join(metric_names) + " |\n"
+selected_metrics_table += "|" + " ---: |" * len(metric_names) + "\n"
+selected_metrics_table += "| " + " | ".join(
+    f"{selected_result[name]:.4f}" for name in metric_names
+) + " |"
+st.markdown(selected_metrics_table)
+st.caption("Positive class: benign (label 1).")
+st.subheader(f"{selected_model_name} confusion matrix")
+matrix = confusion_matrix(y_test, predictions_by_model[selected_model_name], labels=[0, 1])
+st.markdown(
+    "| Actual \\ Predicted | Malignant (0) | Benign (1) |\n"
+    "| --- | ---: | ---: |\n"
+    f"| Malignant (0) | {matrix[0, 0]} | {matrix[0, 1]} |\n"
+    f"| Benign (1) | {matrix[1, 0]} | {matrix[1, 1]} |"
+)
+
+st.subheader(f"{selected_model_name} classification report")
+report = classification_report(
+    y_test,
+    predictions_by_model[selected_model_name],
+    labels=[0, 1],
+    target_names=["Malignant (0)", "Benign (1)"],
+    output_dict=True,
+    zero_division=0,
+)
+report_rows = [
+    ["Class", "Precision", "Recall", "F1 Score", "Support"],
+]
+for class_name in ("Malignant (0)", "Benign (1)", "macro avg", "weighted avg"):
+    class_metrics = report[class_name]
+    report_rows.append(
+        [
+            class_name,
+            f"{class_metrics['precision']:.4f}",
+            f"{class_metrics['recall']:.4f}",
+            f"{class_metrics['f1-score']:.4f}",
+            str(int(class_metrics["support"])),
+        ]
     )
-st.markdown(metrics_table)
-st.caption("Positive class: benign (label 1). All classifiers use the same test data.")
+report_table = "| " + " | ".join(report_rows[0]) + " |\n"
+report_table += "| --- | ---: | ---: | ---: | ---: |\n"
+for report_row in report_rows[1:]:
+    report_table += "| " + " | ".join(report_row) + " |\n"
+report_table += (
+    f"\nAccuracy: {report['accuracy']:.4f} "
+    f"({len(y_test)} samples)"
+)
+st.markdown(report_table)
+with st.expander("Compare all classifiers"):
+    metrics_table = "| Model | " + " | ".join(metric_names) + " |\n"
+    metrics_table += "| --- |" + " ---: |" * len(metric_names) + "\n"
+    for result in results:
+        metrics_table += (
+            f"| {result['Model']} | "
+            + " | ".join(f"{result[name]:.4f}" for name in metric_names)
+            + " |\n"
+        )
+    st.markdown(metrics_table)
 
 st.subheader("Model implementation status")
 st.markdown(
