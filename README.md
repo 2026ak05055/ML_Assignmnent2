@@ -59,7 +59,7 @@ python source/train_models.py
 streamlit run app.py
 ```
 
-The **Live Streamlit app:** `https://mlassignmnent2-erk8i5qsrrez4q4q9xsxmc.streamlit.app/`.
+**Live Streamlit app:** [https://mlassignmnent2-erk8i5qsrrez4q4q9xsxmc.streamlit.app/](https://mlassignmnent2-erk8i5qsrrez4q4q9xsxmc.streamlit.app/)
 
 The training script creates five `.joblib` files in `model/` and the 
 shared held-out `test_data.csv`. 
