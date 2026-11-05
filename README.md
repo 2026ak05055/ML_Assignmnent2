@@ -61,8 +61,8 @@ streamlit run app.py
 
 **Live Streamlit app:** [https://mlassignmnent2-erk8i5qsrrez4q4q9xsxmc.streamlit.app/](https://mlassignmnent2-erk8i5qsrrez4q4q9xsxmc.streamlit.app/)
 
-The training script creates five `.joblib` files in `model/` and the 
-shared held-out `test_data.csv`. 
+The training script creates five `.joblib` files in `model/`, data `wdbc.csv`  
+files in `data/`, and the shared test data held-out `test_data.csv`. 
 
 ## Use the Streamlit app
 
