@@ -134,6 +134,7 @@ selected_model_name = st.selectbox("Select classifier", list(models))
 selected_result = next(result for result in results if result["Model"] == selected_model_name)
 
 # Show metrics for the selected model in the requested assignment order.
+st.subheader(f"{selected_model_name} evaluation matrix")
 selected_metrics_table = "| " + " | ".join(metric_names) + " |\n"
 selected_metrics_table += "|" + " ---: |" * len(metric_names) + "\n"
 selected_metrics_table += "| " + " | ".join(
@@ -191,7 +192,18 @@ report_table += (
 )
 st.markdown(report_table)
 
+
+# Display information about the dataset and the test split.
+st.subheader("Dataset and test split")
+with st.expander("Dataset and test split"):
+    st.write(f"Held-out instances: {len(test_data)}")
+    st.write(f"Input features: {X_test.shape[1]}")
+    st.write(f"Data source: {data_source}")
+    st.write("Each classifier uses its saved preprocessing and fitted estimator.")
+
+
 # Keep the full metric comparison available for all classifiers.
+st.subheader("Models comparison")
 with st.expander("Compare all classifiers"):
     metrics_table = "| Model | " + " | ".join(metric_names) + " |\n"
     metrics_table += "| --- |" + " ---: |" * len(metric_names) + "\n"
@@ -202,10 +214,3 @@ with st.expander("Compare all classifiers"):
             + " |\n"
         )
     st.markdown(metrics_table)
-
-# Display information about the dataset and the test split.
-with st.expander("Dataset and test split"):
-    st.write(f"Held-out instances: {len(test_data)}")
-    st.write(f"Input features: {X_test.shape[1]}")
-    st.write(f"Data source: {data_source}")
-    st.write("Each classifier uses its saved preprocessing and fitted estimator.")
