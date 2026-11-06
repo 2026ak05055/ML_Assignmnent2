@@ -52,8 +52,7 @@ ML_Assignmnet2_Rev02/
 - `model/` contains the trained model pipelines and evaluation metrics.
 - `source/` contains the model training and report-generation scripts.
 - `app.py` is the Streamlit application entry point.
-- `classifier_evaluator.ipynb` contains the interactive model evaluation workflow.
-- `assignment_report.pdf` is the generated assignment report.
+
 - `requirements.txt` lists the Python dependencies.
 ## d. Models used
 
