@@ -30,7 +30,7 @@ Public repository: [https://github.com/2026ak05055/ML_Assignmnent2](https://gith
 ### Project folder and file structure
 
 ```text
-ML_Assignmnet2_Rev02/
+ML_Assignmnet2/
 |-- data/
 |   |-- wdbc.csv
 |   `-- wdbc.data
